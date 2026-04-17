@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>croixph's badges</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        :root { --bg: #121212; --card-bg: #1e1e1e; --accent: #007bff; --text: #e0e0e0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        
+        .header-container { padding: 60px 20px 30px 20px; background-color: #1a1a1a; border-bottom: 2px solid #333; text-align: center; }
+        h1 { font-size: 2.8em; margin: 0 0 10px 0; letter-spacing: -1px; }
+        
+        .tabs { display: flex; justify-content: center; gap: 20px; margin-top: 25px; }
+        .tab-btn { background: none; border: none; color: #888; font-size: 1.1em; font-weight: 600; cursor: pointer; padding: 10px 20px; transition: 0.3s; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        #searchBar { width: 85%; max-width: 500px; padding: 14px 24px; margin-top: 25px; border-radius: 30px; border: 1px solid #444; background: #222; color: white; font-size: 16px; outline: none; transition: 0.3s; }
+        #searchBar:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0,123,255,0.2); }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px; max-width: 1300px; margin: 40px auto; padding: 0 20px; }
+        
+        .img-loading-bg {
+            background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+            background-size: 200% 100%;
+            animation: skeletonLoading 1.5s infinite linear;
+        }
+        @keyframes skeletonLoading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        img { opacity: 0; transition: opacity 0.6s ease-in-out; }
+        img.loaded { opacity: 1; }
+
+        .card { background: var(--card-bg); border-radius: 15px; overflow: hidden; text-decoration: none; color: inherit; transition: 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); display: flex; flex-direction: column; cursor: pointer; border: 1px solid #2a2a2a; }
+        .card:hover { transform: translateY(-8px); border-color: #444; box-shadow: 0 12px 24px rgba(0,0,0,0.5); }
+        
+        .card-img-container { width: 100%; height: 320px; border-bottom: 1px solid #2a2a2a; }
+        .card-img-container img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .card .title { padding: 18px; font-weight: 600; font-size: 1.05em; background: #252525; flex-grow: 1; display: flex; align-items: center; justify-content: center; text-align: center; }
+        
+        .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; max-width: 1300px; margin: 0 auto; padding: 40px 20px; }
+        
+        .badge-container {
+            position: relative;
+            width: 100%;
+            min-height: 180px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .badge-container img { width: 100%; border-radius: 10px; transition: opacity 0.6s ease-in-out, transform 0.2s; }
+        .badge-container:hover img { transform: scale(1.03); }
+
+        .animated-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent);
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        .back-btn { position: fixed; top: 25px; left: 25px; width: 45px; height: 45px; background: rgba(50,50,50,0.8); backdrop-filter: blur(5px); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 100; cursor: pointer; border: 1px solid #444; color: white; transition: 0.2s; }
+        .back-btn:hover { background: var(--accent); border-color: var(--accent); }
+
+        .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        
+        .modal-content { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 90%; max-height: 90%; }
+        .modal-content img { max-width: 100%; max-height: 75vh; border-radius: 12px; box-shadow: 0 0 50px rgba(0,0,0,0.8); opacity: 1; }
+        
+        .toggle-btn { margin-top: 20px; padding: 10px 24px; background: var(--accent); color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 15px; font-weight: bold; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .toggle-btn:hover { background: #0056b3; transform: scale(1.05); }
+
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div v-if="!activeId">
+            <div class="header-container">
+                <h1>croixph's badges</h1>
+                
+                <div class="tabs">
+                    <button class="tab-btn" :class="{ active: currentTab === 'categories' }" @click="currentTab = 'categories'">Categories</button>
+                    <button class="tab-btn" :class="{ active: currentTab === 'characters' }" @click="currentTab = 'characters'">Characters</button>
+                </div>
+
+                <input v-if="currentTab === 'categories'" type="text" v-model="search" id="searchBar" placeholder="Search category...">
+                
+                <h2 v-if="currentTab === 'categories'" style="font-size: 0.8em; color: rgb(160, 160, 160); font-weight: 400; margin-top: 20px;">
+                    Category names are based on the AniList ENGLISH title.<br>
+                    Exceptions include collection series (e.g. Fate, Monogatari) and anything not on AniList.
+                </h2>
+                <h2 v-else style="font-size: 0.8em; color: rgb(160, 160, 160); font-weight: 400; margin-top: 20px;">
+                    Images with a GIF tag have animated versions.
+                </h2>
+            </div>
+
+            <div v-if="currentTab === 'categories'" class="grid">
+                <a v-for="s in filteredSeries" :key="s.id" :href="'#' + encodeURIComponent(s.id)" class="card">
+                    <div class="card-img-container img-loading-bg">
+                        <img :src="s.cover" :alt="s.title" loading="lazy" @load="onImgLoad" decoding="async">
+                    </div>
+                    <div class="title">{{ s.title }}</div>
+                </a>
+            </div>
+
+            <div v-else class="badge-grid">
+                <div v-for="img in allImages" 
+                     :key="img.seriesId + img.base" 
+                     class="badge-container img-loading-bg"
+                     @click="openModal(img, img.seriesId)">
+                    <img :src="'series/' + img.seriesId + '/' + img.display" 
+                         loading="lazy"
+                         @load="onImgLoad"
+                         decoding="async">
+                    <div v-if="img.has_animated" class="animated-badge">GIF</div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else>
+            <button class="back-btn" @click="goHome">
+                <svg fill="currentColor" viewBox="0 0 24 24" width="24" height="24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></svg>
+            </button>
+            <div class="header-container">
+                <h2 style="margin:0; font-size: 2em;">{{ currentSeries?.title || 'Loading...' }}</h2>
+                <p style="margin-top:10px; color:#888;">{{ currentSeries?.images.length }} badges available<br><span style="font-size:0.8em;">Images with a GIF tag have animated versions</span></p>
+            </div>
+            <div class="badge-grid" v-if="currentSeries">
+                <div v-for="img in currentSeries.images" 
+                     :key="img.base" 
+                     class="badge-container img-loading-bg"
+                     @click="openModal(img, currentSeries.id)">
+                    <img :src="'series/' + currentSeries.id + '/' + img.display" 
+                         loading="lazy"
+                         @load="onImgLoad"
+                         decoding="async">
+                    <div v-if="img.has_animated" class="animated-badge">GIF</div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="currentModalImg" class="modal" @click="closeModal">
+            <div class="modal-content" @click.stop>
+                <img v-show="!showAnimated" 
+                     :src="'series/' + modalSeriesId + '/' + currentModalImg.display" 
+                     decoding="async">
+                     
+                <img v-if="currentModalImg.has_animated" 
+                     v-show="showAnimated" 
+                     :src="'series/' + modalSeriesId + '/' + currentModalImg.animated" 
+                     decoding="async">
+                     
+                <button v-if="currentModalImg.has_animated" class="toggle-btn" @click="toggleAnimated">
+                    {{ showAnimated ? 'View Static PNG' : 'View Animated GIF' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+        const seriesData = [{"id": "86", "title": "86 EIGHTY-SIX", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx116589-qT34qzsZtk9V.jpg", "images": [{"base": "shineinouzen", "display": "shineinouzen.png", "has_animated": false, "animated": null}, {"base": "vladilenamilize", "display": "vladilenamilize.png", "has_animated": false, "animated": null}]}, {"id": "a sign of affection", "title": "A Sign of Affection", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx166794-1MAXFMgND6qS.jpg", "images": [{"base": "itsuyuki", "display": "itsuyuki.png", "has_animated": true, "animated": "itsuyuki.gif"}]}, {"id": "AKIRA", "title": "AKIRA (Shin Anime)", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx126016-9PaIQHxFyyho.png", "images": [{"base": "kanedashotaro", "display": "kanedashotaro.png", "has_animated": false, "animated": null}, {"base": "tetsuoshima", "display": "tetsuoshima.png", "has_animated": false, "animated": null}]}, {"id": "alya sometimes hides her feelings in russian", "title": "Alya Sometimes Hides Her Feelings in Russian", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx162804-TBeptcAfvqTd.jpg", "images": [{"base": "alya", "display": "alya.png", "has_animated": false, "animated": null}]}, {"id": "attack on titan", "title": "Attack on Titan", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-buvcRTBx4NSm.jpg", "images": [{"base": "eren1", "display": "eren1.png", "has_animated": false, "animated": null}, {"base": "levi1", "display": "levi1.png", "has_animated": false, "animated": null}, {"base": "levi2", "display": "levi2.png", "has_animated": false, "animated": null}]}, {"id": "birdie wing", "title": "BIRDIE WING -Golf Girls' Story-", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx140830-hHqRY63VwOp2.jpg", "images": [{"base": "eveandaoi", "display": "eveandaoi.png", "has_animated": false, "animated": null}]}, {"id": "bleach", "title": "Bleach", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx269-d2GmRkJbMopq.png", "images": [{"base": "gin", "display": "gin.png", "has_animated": false, "animated": null}, {"base": "ichigokurosaki", "display": "ichigokurosaki.png", "has_animated": false, "animated": null}]}, {"id": "blue lock", "title": "BLUE LOCK", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx137822-U8naszP96vzC.png", "images": [{"base": "chigiri", "display": "chigiri.png", "has_animated": false, "animated": null}, {"base": "nagi", "display": "nagi.png", "has_animated": false, "animated": null}, {"base": "nagireo", "display": "nagireo.png", "has_animated": false, "animated": null}, {"base": "yoichi", "display": "yoichi.png", "has_animated": false, "animated": null}]}, {"id": "bungou stray dogs", "title": "Bungo Stray Dogs", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21311-hAXyT8Yoh6G9.jpg", "images": [{"base": "chuuya", "display": "chuuya.png", "has_animated": false, "animated": null}, {"base": "dazai", "display": "dazai.png", "has_animated": false, "animated": null}, {"base": "soukoku", "display": "soukoku.png", "has_animated": false, "animated": null}]}, {"id": "catch me at the ballpark", "title": "Catch Me at the Ballpark!", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx184279-dw02k4DPxwGz.png", "images": [{"base": "ruriko", "display": "ruriko.png", "has_animated": false, "animated": null}]}, {"id": "city the animation", "title": "CITY THE ANIMATION", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx181841-R6fB3bmU5eOE.jpg", "images": [{"base": "montblanc", "display": "montblanc.png", "has_animated": false, "animated": null}]}, {"id": "classroom of the elite", "title": "Classroom of the Elite", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx98659-WNyPLIZDpGGY.jpg", "images": [{"base": "ayanokoji", "display": "ayanokoji.png", "has_animated": false, "animated": null}, {"base": "ichika", "display": "ichika.png", "has_animated": false, "animated": null}, {"base": "ichinose", "display": "ichinose.png", "has_animated": false, "animated": null}]}, {"id": "dandadan", "title": "DAN DA DAN", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx171018-60q1B6GK2Ghb.jpg", "images": [{"base": "ken", "display": "ken.png", "has_animated": true, "animated": "ken.gif"}]}, {"id": "delicious in dungeon", "title": "Delicious in Dungeon", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx153518-IVXPDY5ph3kO.jpg", "images": [{"base": "falin", "display": "falin.png", "has_animated": false, "animated": null}, {"base": "laios", "display": "laios.png", "has_animated": false, "animated": null}, {"base": "marcille", "display": "marcille.png", "has_animated": false, "animated": null}, {"base": "senshi", "display": "senshi.png", "has_animated": false, "animated": null}]}, {"id": "demon slayer", "title": "Demon Slayer", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-WBsBl0ClmgYL.jpg", "images": [{"base": "nezuko", "display": "nezuko.png", "has_animated": true, "animated": "nezuko.gif"}, {"base": "rengoku", "display": "rengoku.png", "has_animated": true, "animated": "rengoku.gif"}]}, {"id": "dr stone", "title": "Dr. STONE", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx105333-GybuoSoOZfpH.jpg", "images": [{"base": "senku", "display": "senku.png", "has_animated": false, "animated": null}]}, {"id": "fate", "title": "Fate Series", "cover": "https://m.media-amazon.com/images/M/MV5BZTNmZWI3ZWYtNjkzYi00ZTFkLWI0MzctMjc2YzlmNGRkNzRiXkEyXkFqcGc@._V1_.jpg", "images": [{"base": "ishtar&ereshkigal", "display": "ishtar&ereshkigal.png", "has_animated": false, "animated": null}, {"base": "lanling wang", "display": "lanling wang.png", "has_animated": false, "animated": null}, {"base": "lanling wang 2", "display": "lanling wang 2.png", "has_animated": false, "animated": null}, {"base": "rin", "display": "rin.png", "has_animated": false, "animated": null}]}, {"id": "FLCL", "title": "FLCL", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx227-qOB9ZhVvNnqO.jpg", "images": [{"base": "canti", "display": "canti.png", "has_animated": true, "animated": "canti.gif"}]}, {"id": "given", "title": "given", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx108430-UdruJPro4vDK.jpg", "images": [{"base": "kaji", "display": "kaji.png", "has_animated": false, "animated": null}, {"base": "mafuyu", "display": "mafuyu.png", "has_animated": false, "animated": null}, {"base": "shizusumi", "display": "shizusumi.png", "has_animated": false, "animated": null}, {"base": "ugetsu", "display": "ugetsu.png", "has_animated": true, "animated": "ugetsu.gif"}]}, {"id": "GTO", "title": "GTO: Great Teacher Onizuka", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx245-NcQAyTipUMeO.jpg", "images": [{"base": "onizuka", "display": "onizuka.png", "has_animated": false, "animated": null}]}, {"id": "haikyuu", "title": "HAIKYU!!", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20464-ooZUyBe4ptp9.png", "images": [{"base": "hinata", "display": "hinata.png", "has_animated": false, "animated": null}, {"base": "kageyama", "display": "kageyama.png", "has_animated": false, "animated": null}, {"base": "kenma", "display": "kenma.png", "has_animated": false, "animated": null}, {"base": "kuroo", "display": "kuroo.png", "has_animated": false, "animated": null}, {"base": "nishinoya", "display": "nishinoya.png", "has_animated": false, "animated": null}, {"base": "oikawa", "display": "oikawa.png", "has_animated": false, "animated": null}, {"base": "sugawara", "display": "sugawara.png", "has_animated": false, "animated": null}, {"base": "tsukishima", "display": "tsukishima.png", "has_animated": false, "animated": null}]}, {"id": "hell's paradise", "title": "Hell\u2019s Paradise", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx128893-Gc2t8b8M0mVu.jpg", "images": [{"base": "gabimaru", "display": "gabimaru.png", "has_animated": false, "animated": null}]}, {"id": "horimiya", "title": "Horimiya", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx124080-oeviACzGv5Vx.jpg", "images": [{"base": "horimiya", "display": "horimiya.png", "has_animated": false, "animated": null}, {"base": "izumi", "display": "izumi.png", "has_animated": false, "animated": null}]}, {"id": "how to win my husband over", "title": "How to Win My Husband Over", "cover": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx141013-YZhKrs2IqxWY.png", "images": [{"base": "iske van omerta", "display": "iske van omerta.png", "has_animated": false, "animated": null}, {"base": "ruby", "display": "ruby.png", "has_animated": false, "animated": null}]}, {"id": "hunter x hunter", "title": "Hunter X Hunter", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx11061-y5gsT1hoHuHw.png", "images": [{"base": "gon", "display": "gon.png", "has_animated": false, "animated": null}, {"base": "hisoka", "display": "hisoka.png", "has_animated": false, "animated": null}, {"base": "killua", "display": "killua.png", "has_animated": false, "animated": null}, {"base": "meruem", "display": "meruem.png", "has_animated": false, "animated": null}, {"base": "neferpitou", "display": "neferpitou.png", "has_animated": false, "animated": null}]}, {"id": "i want to eat your pancreas", "title": "I Want to Eat Your Pancreas", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx99750-pNyly9d3MEgV.jpg", "images": [{"base": "yamauchi", "display": "yamauchi.png", "has_animated": true, "animated": "yamauchi.gif"}]}, {"id": "i was reincarnated as the 7th prince", "title": "I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx156415-zwP9deA786S1.jpg", "images": [{"base": "sylpha", "display": "sylpha.png", "has_animated": true, "animated": "sylpha.gif"}, {"base": "talia", "display": "talia.png", "has_animated": true, "animated": "talia.gif"}, {"base": "tao", "display": "tao.png", "has_animated": true, "animated": "tao.gif"}]}, {"id": "initial d", "title": "Initial D", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b185-GvXiR8AKTmdn.jpg", "images": [{"base": "takumi fujiwara", "display": "takumi fujiwara.png", "has_animated": false, "animated": null}]}, {"id": "jujutsu kaisen", "title": "JUJUTSU KAISEN", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx113415-LHBAeoZDIsnF.jpg", "images": [{"base": "gojo", "display": "gojo.png", "has_animated": true, "animated": "gojo.gif"}, {"base": "gojo2", "display": "gojo2.png", "has_animated": true, "animated": "gojo2.gif"}, {"base": "gojou1", "display": "gojou1.png", "has_animated": false, "animated": null}, {"base": "gojou2", "display": "gojou2.png", "has_animated": false, "animated": null}, {"base": "megumi", "display": "megumi.png", "has_animated": true, "animated": "megumi.gif"}, {"base": "megumi2", "display": "megumi2.png", "has_animated": true, "animated": "megumi2.gif"}, {"base": "ryomensukuna", "display": "ryomensukuna.png", "has_animated": true, "animated": "ryomensukuna.gif"}, {"base": "satorugojo", "display": "satorugojo.png", "has_animated": true, "animated": "satorugojo.gif"}, {"base": "sukuna", "display": "sukuna.png", "has_animated": true, "animated": "sukuna.gif"}, {"base": "sukuna2", "display": "sukuna2.png", "has_animated": true, "animated": "sukuna2.gif"}]}, {"id": "kagerou project", "title": "Kagerou Project", "cover": "https://m.media-amazon.com/images/I/81Ygcib-l6L._AC_UF1000,1000_QL80_.jpg", "images": [{"base": "kozakura mary", "display": "kozakura mary.png", "has_animated": false, "animated": null}]}, {"id": "kamisama kiss", "title": "Kamisama Kiss", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx14713-RyZ7bA7CdvGw.jpg", "images": [{"base": "tomoe", "display": "tomoe.png", "has_animated": false, "animated": null}]}, {"id": "land of the lustrous", "title": "Land of the Lustrous", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx98707-25nUKb4XUFgY.png", "images": [{"base": "antarcticite", "display": "antarcticite.png", "has_animated": false, "animated": null}, {"base": "phos", "display": "phos.png", "has_animated": false, "animated": null}]}, {"id": "letter bee", "title": "Letter Bee", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b6444-Eiizf1cvuOg5.jpg", "images": [{"base": "gauche", "display": "gauche.png", "has_animated": false, "animated": null}]}, {"id": "lord of the mysteries", "title": "Lord of Mysteries", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx137667-xQxzQRAerw53.jpg", "images": [{"base": "derrickberg1", "display": "derrickberg1.png", "has_animated": false, "animated": null}, {"base": "derrickberg2", "display": "derrickberg2.png", "has_animated": false, "animated": null}, {"base": "klein", "display": "klein.png", "has_animated": false, "animated": null}, {"base": "kleinmoretti&amon", "display": "kleinmoretti&amon.png", "has_animated": false, "animated": null}]}, {"id": "macross 7", "title": "Macross 7", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1397-D9MLYHZhOnYO.png", "images": [{"base": "nekkibasara", "display": "nekkibasara.png", "has_animated": false, "animated": null}]}, {"id": "medalist", "title": "Medalist", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx165171-an9pyRXwVxJS.jpg", "images": [{"base": "inori&tsukasa", "display": "inori&tsukasa.png", "has_animated": false, "animated": null}]}, {"id": "mob psycho 100", "title": "Mob Psycho 100", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21507-6YUSbh2m0N1p.jpg", "images": [{"base": "reigenarataka", "display": "reigenarataka.png", "has_animated": true, "animated": "reigenarataka.gif"}, {"base": "shigeokageyama", "display": "shigeokageyama.png", "has_animated": true, "animated": "shigeokageyama.gif"}]}, {"id": "mobile suit gundam", "title": "Mobile Suit Gundam", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx80-pdYJ12vSTmad.jpg", "images": [{"base": "charaznable", "display": "charaznable.png", "has_animated": false, "animated": null}, {"base": "garmazabi", "display": "garmazabi.png", "has_animated": false, "animated": null}, {"base": "mikazukiaugus", "display": "mikazukiaugus.png", "has_animated": false, "animated": null}]}, {"id": "monogatari series", "title": "Monogatari Series", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx17074-xMhVAZsEDH66.png", "images": [{"base": "koyomiararagi", "display": "koyomiararagi.png", "has_animated": false, "animated": null}, {"base": "shinobuoshino", "display": "shinobuoshino.png", "has_animated": false, "animated": null}]}, {"id": "monster", "title": "Monster", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx19-gtMC64182sm4.jpg", "images": [{"base": "johan", "display": "johan.png", "has_animated": false, "animated": null}]}, {"id": "mushoku tensei", "title": "Mushoku Tensei: Jobless Reincarnation", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx108465-1ANspF1EWyFx.jpg", "images": [{"base": "roxy1", "display": "roxy1.png", "has_animated": false, "animated": null}, {"base": "roxy2", "display": "roxy2.png", "has_animated": false, "animated": null}]}, {"id": "my hero academia", "title": "My Hero Academia", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21459-nYh85uj2Fuwr.jpg", "images": [{"base": "bakugou", "display": "bakugou.png", "has_animated": false, "animated": null}, {"base": "dabi", "display": "dabi.png", "has_animated": false, "animated": null}, {"base": "izuku", "display": "izuku.png", "has_animated": false, "animated": null}, {"base": "keigo", "display": "keigo.png", "has_animated": false, "animated": null}, {"base": "miruko", "display": "miruko.png", "has_animated": false, "animated": null}, {"base": "shinsou", "display": "shinsou.png", "has_animated": false, "animated": null}, {"base": "shouto", "display": "shouto.png", "has_animated": false, "animated": null}, {"base": "tsuyu", "display": "tsuyu.png", "has_animated": false, "animated": null}]}, {"id": "teen romantic comedy snafu", "title": "My Teen Romantic Comedy SNAFU", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx14813-3mNvcKNEQcDs.jpg", "images": [{"base": "hachiman", "display": "hachiman.png", "has_animated": false, "animated": null}]}, {"id": "naruto", "title": "Naruto", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20-dE6UHbFFg1A5.jpg", "images": [{"base": "itachi uchiha", "display": "itachi uchiha.png", "has_animated": false, "animated": null}, {"base": "kakashi1", "display": "kakashi1.png", "has_animated": false, "animated": null}, {"base": "kakashi2", "display": "kakashi2.png", "has_animated": false, "animated": null}]}, {"id": "neon genesis evangelion", "title": "Neon Genesis Evangelion", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx30-AI1zr74Dh4ye.jpg", "images": [{"base": "rei", "display": "rei.png", "has_animated": false, "animated": null}]}, {"id": "one piece", "title": "ONE PIECE", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-ELSYx3yMPcKM.jpg", "images": [{"base": "sanji", "display": "sanji.png", "has_animated": false, "animated": null}, {"base": "sanji2", "display": "sanji2.png", "has_animated": false, "animated": null}]}, {"id": "oshi no ko", "title": "Oshi No Ko", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx150672-WqmmwZ4nMzAy.png", "images": [{"base": "aihoshino", "display": "aihoshino.png", "has_animated": false, "animated": null}, {"base": "akanekurokawa", "display": "akanekurokawa.png", "has_animated": false, "animated": null}, {"base": "ruby", "display": "ruby.png", "has_animated": false, "animated": null}, {"base": "ruby&aquamarine", "display": "ruby&aquamarine.png", "has_animated": false, "animated": null}, {"base": "ruby2", "display": "ruby2.png", "has_animated": false, "animated": null}]}, {"id": "precure", "title": "PRECURE", "cover": "https://media.themoviedb.org/t/p/w500/uVRRvXJlP4GONB1PgbqpcaIl2Ub.jpg", "images": [{"base": "honoka", "display": "honoka.png", "has_animated": true, "animated": "honoka.gif"}]}, {"id": "project sekai", "title": "Project SEKAI COLORFUL STAGE!", "cover": "https://jpbookstore.com/cdn/shop/products/81HpEeOnSBL_1260x1789.jpg", "images": [{"base": "kanade", "display": "kanade.png", "has_animated": false, "animated": null}]}, {"id": "madoka magica", "title": "Puella Magi Madoka Magica", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9756-QnUGwlwwnsuN.jpg", "images": [{"base": "madoka", "display": "madoka.png", "has_animated": false, "animated": null}]}, {"id": "ranma", "title": "Ranma \u00bd", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx210-qgahLDYT0t9b.png", "images": [{"base": "shampoo", "display": "shampoo.png", "has_animated": true, "animated": "shampoo.webp"}]}, {"id": "rascal does not dream of bunny girl senpai", "title": "Rascal Does Not Dream of Bunny Girl Senpai", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101291-wfEdgPqtfU0l.jpg", "images": [{"base": "mai", "display": "mai.png", "has_animated": false, "animated": null}, {"base": "sakuta", "display": "sakuta.png", "has_animated": false, "animated": null}]}, {"id": "samurai champloo", "title": "Samurai Champloo", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx205-7tHVFu6dPBm9.png", "images": [{"base": "mugen", "display": "mugen.png", "has_animated": false, "animated": null}]}, {"id": "secret lady", "title": "Secret Lady", "cover": "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/bx133797-R7xbGOuFUeoq.jpg", "images": [{"base": "charteris kartazen", "display": "charteris kartazen.png", "has_animated": false, "animated": null}]}, {"id": "serial experiments lain", "title": "Serial Experiments Lain", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx339-xF2wp1NQuQ4r.png", "images": [{"base": "lainiwakura", "display": "lainiwakura.png", "has_animated": false, "animated": null}]}, {"id": "shakugan no shana", "title": "Shakugan no Shana", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx355-tB52QB38leMs.png", "images": [{"base": "shana", "display": "shana.png", "has_animated": true, "animated": "shana.webp"}]}, {"id": "shaman king", "title": "Shaman King", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx154-hSYv4EtcBE1p.png", "images": [{"base": "lysergdiethel", "display": "lysergdiethel.png", "has_animated": false, "animated": null}]}, {"id": "skip and loafer", "title": "Skip and Loafer", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx141911-o6Jwav7hRPPM.jpg", "images": [{"base": "shimamitsu", "display": "shimamitsu.png", "has_animated": false, "animated": null}]}, {"id": "solo leveling", "title": "Solo Leveling", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx151807-it355ZgzquUd.png", "images": [{"base": "sungjinwoo", "display": "sungjinwoo.png", "has_animated": true, "animated": "sungjinwoo.gif"}, {"base": "sungjinwoo2", "display": "sungjinwoo2.png", "has_animated": false, "animated": null}]}, {"id": "sonny boy", "title": "Sonny Boy", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx132126-4ugVjXMQLAps.png", "images": [{"base": "nagara", "display": "nagara.png", "has_animated": false, "animated": null}]}, {"id": "sound euphonium", "title": "Sound! Euphonium", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20912-SiiG4HPrjQlX.jpg", "images": [{"base": "kumikooumae", "display": "kumikooumae.png", "has_animated": false, "animated": null}]}, {"id": "spy x family", "title": "SPY x FAMILY", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx140960-Kb6R5nYQfjmP.jpg", "images": [{"base": "yor&loid", "display": "yor&loid.png", "has_animated": true, "animated": "yor&loid.gif"}]}, {"id": "steel ball run", "title": "STEEL BALL RUN JoJo's Bizarre Adventure", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx190327-fIfMy1LTkdGP.jpg", "images": [{"base": "gyrozeppeli", "display": "gyrozeppeli.png", "has_animated": false, "animated": null}]}, {"id": "steins_gate", "title": "Steins;Gate", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9253-tIUXF2gfU8Sg.jpg", "images": [{"base": "makisekurisu", "display": "makisekurisu.png", "has_animated": true, "animated": "makisekurisu.gif"}, {"base": "okaberintarou", "display": "okaberintarou.png", "has_animated": true, "animated": "okaberintarou.gif"}, {"base": "okakuri", "display": "okakuri.png", "has_animated": true, "animated": "okakuri.gif"}]}, {"id": "takopi original sin", "title": "Takopi's Original Sin", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx185407-7uzY4fA3hokP.jpg", "images": [{"base": "takopi", "display": "takopi.png", "has_animated": false, "animated": null}]}, {"id": "that time i got reincarnated as a slime", "title": "That Time I Got Reincarnated as a Slime", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101280-tDxCVJm714nt.jpg", "images": [{"base": "benimaru", "display": "benimaru.png", "has_animated": false, "animated": null}, {"base": "diablo", "display": "diablo.png", "has_animated": false, "animated": null}, {"base": "rimuru", "display": "rimuru.png", "has_animated": false, "animated": null}]}, {"id": "angel next door spoils me rotten", "title": "The Angel Next Door Spoils Me Rotten", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx143338-zhyDVYgEzsm5.png", "images": [{"base": "mahiru", "display": "mahiru.png", "has_animated": false, "animated": null}]}, {"id": "the apothecary diaries", "title": "The Apothecary Diaries", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx161645-QLbzHXiYRgV2.jpg", "images": [{"base": "maoamao2", "display": "maoamao2.png", "has_animated": false, "animated": null}, {"base": "maomao1", "display": "maomao1.png", "has_animated": false, "animated": null}, {"base": "maomao3", "display": "maomao3.png", "has_animated": false, "animated": null}]}, {"id": "familiar of zero", "title": "The Familiar of Zero", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1195-odpKgDQ7A1fV.png", "images": [{"base": "louise", "display": "louise.png", "has_animated": true, "animated": "louise.webp"}]}, {"id": "fragrant flower blooms with dignity", "title": "The Fragrant Flower Blooms With Dignity", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx181444-Ut9DDUZdfHwg.jpg", "images": [{"base": "kaoruko", "display": "kaoruko.png", "has_animated": false, "animated": null}]}, {"id": "the ossan newbie adventurer", "title": "The Ossan Newbie Adventurer, Trained to Death by the Most Powerful Party, Became Invincible", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx163292-1DkPP4r5UI9Y.jpg", "images": [{"base": "reanette", "display": "reanette.png", "has_animated": true, "animated": "reanette.gif"}]}, {"id": "toilet-bound hanako-kun", "title": "Toilet-bound Hanako-kun", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx108463-u03vrYnyB3L9.jpg", "images": [{"base": "hanako", "display": "hanako.png", "has_animated": false, "animated": null}, {"base": "nene", "display": "nene.png", "has_animated": false, "animated": null}]}, {"id": "tokyo ghoul", "title": "Tokyo Ghoul", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b20605-k665mVkSug8D.jpg", "images": [{"base": "kanekiken", "display": "kanekiken.png", "has_animated": true, "animated": "kanekiken.gif"}, {"base": "toukakirishima", "display": "toukakirishima.png", "has_animated": true, "animated": "toukakirishima.gif"}]}, {"id": "tougen anki", "title": "TOUGEN ANKI", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx177474-oHil1yLWldfl.jpg", "images": [{"base": "shiki", "display": "shiki.png", "has_animated": true, "animated": "shiki.gif"}]}, {"id": "umamusume", "title": "Umamusume", "cover": "https://stars777reward.com/wp-content/uploads/2026/01/Uma-Musume-Gacha-Game-Review-Ultimate-Guide-2026.png", "images": [{"base": "kinghalo", "display": "kinghalo.png", "has_animated": false, "animated": null}]}, {"id": "urusei yatsura", "title": "Urusei Yatsura", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1293-xohJFutZXimo.jpg", "images": [{"base": "lum", "display": "lum.png", "has_animated": true, "animated": "lum.webp"}]}, {"id": "usogui", "title": "Usogui", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx13303-RsJ5jAwDF64x.png", "images": [{"base": "bakumadarame", "display": "bakumadarame.png", "has_animated": false, "animated": null}, {"base": "kirumasouichi", "display": "kirumasouichi.png", "has_animated": false, "animated": null}, {"base": "vincentlalo", "display": "vincentlalo.png", "has_animated": false, "animated": null}]}, {"id": "vinland saga", "title": "Vinland Saga", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101348-2fhDFPCuMNiz.jpg", "images": [{"base": "thorfinn", "display": "thorfinn.png", "has_animated": false, "animated": null}]}, {"id": "violet evergarden", "title": "Violet Evergarden", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21827-ubzq619ZA2E9.png", "images": [{"base": "violet evergarden", "display": "violet evergarden.png", "has_animated": false, "animated": null}]}, {"id": "wind breaker", "title": "WIND BREAKER", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx163270-wboZJp0ybwVK.jpg", "images": [{"base": "harukasakura", "display": "harukasakura.png", "has_animated": true, "animated": "harukasakura.gif"}]}, {"id": "yona of the dawn", "title": "Yona of the Dawn", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20770-brCDvhTXlums.png", "images": [{"base": "hak son", "display": "hak son.png", "has_animated": false, "animated": null}]}, {"id": "your lie in april", "title": "Your lie in April", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20665-TLgkL8T8IRFd.png", "images": [{"base": "arimamiyazono", "display": "arimamiyazono.png", "has_animated": true, "animated": "arimamiyazono.gif"}]}, {"id": "zombie land saga", "title": "ZOMBIE LAND SAGA", "cover": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx103871-KEWbn3fkz499.png", "images": [{"base": "saki", "display": "saki.png", "has_animated": true, "animated": "saki.gif"}]}];
+
+        createApp({
+            setup() {
+                const search = ref('');
+                const activeId = ref('');
+                const currentTab = ref('categories');
+                const currentModalImg = ref(null);
+                const modalSeriesId = ref('');
+                const showAnimated = ref(false);
+                const lastScrollPos = ref(0);
+
+                const getHash = () => decodeURIComponent(window.location.hash.replace('#', ''));
+
+                const filteredSeries = computed(() => 
+                    seriesData.filter(s => s.title.toLowerCase().includes(search.value.toLowerCase()))
+                );
+
+                const currentSeries = computed(() => 
+                    seriesData.find(s => s.id === activeId.value)
+                );
+
+                const allImages = computed(() => {
+                    let flattened = [];
+                    seriesData.forEach(s => {
+                        s.images.forEach(img => {
+                            flattened.push({ ...img, seriesId: s.id });
+                        });
+                    });
+                    return flattened;
+                });
+
+                const onImgLoad = (e) => {
+                    e.target.classList.add('loaded');
+                    const parent = e.target.closest('.img-loading-bg');
+                    if (parent) {
+                        parent.classList.remove('img-loading-bg');
+                        parent.style.background = 'transparent';
+                    }
+                };
+
+                const goHome = () => { window.location.hash = ''; };
+
+                const openModal = (img, sId) => {
+                    currentModalImg.value = img;
+                    modalSeriesId.value = sId;
+                    showAnimated.value = false;
+                };
+
+                const closeModal = () => {
+                    currentModalImg.value = null;
+                };
+
+                const toggleAnimated = () => {
+                    showAnimated.value = !showAnimated.value;
+                };
+
+                const updateRoute = () => {
+                    const newId = getHash();
+                    if (activeId.value && !newId) {
+                        activeId.value = '';
+                        nextTick(() => window.scrollTo(0, lastScrollPos.value));
+                    } else if (newId) {
+                        if (!activeId.value) lastScrollPos.value = window.scrollY;
+                        activeId.value = newId;
+                        window.scrollTo(0, 0);
+                    } else {
+                        activeId.value = '';
+                    }
+                };
+
+                onMounted(() => {
+                    window.addEventListener('hashchange', updateRoute);
+                    updateRoute();
+                });
+
+                return { 
+                    search, activeId, currentTab, filteredSeries, currentSeries, allImages,
+                    goHome, onImgLoad, currentModalImg, modalSeriesId, showAnimated, 
+                    openModal, closeModal, toggleAnimated 
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
