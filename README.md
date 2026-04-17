@@ -1,0 +1,2 @@
+# xalikax-badges
+Character Badges
